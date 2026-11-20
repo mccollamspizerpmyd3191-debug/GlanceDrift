@@ -1,0 +1,13 @@
+# Personal preferences and temporary saves
+/BorrowScreen.ini
+/BorrowScreen.ini.*.tmp
+
+# Build and release output
+*.exe
+*.dll
+*.obj
+*.exp
+*.lib
+*.pdb
+*.zip
+/.vs/
