@@ -1,0 +1,36 @@
+name: Publish Windows portable release
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and package
+        shell: pwsh
+        run: |
+          ./build.ps1
+          New-Item -ItemType Directory -Path portable | Out-Null
+          Copy-Item BorrowScreen.exe portable/GlanceDrift.exe
+          Copy-Item PixelCapture.dll portable/
+          Compress-Archive -Path portable/GlanceDrift.exe,portable/PixelCapture.dll -DestinationPath GlanceDrift-win-x64.zip
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content -Raw VERSION).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected a three-part version number.' }
+          $notes = Get-Content -Raw "releases/$version.md"
+          $hash = (Get-FileHash GlanceDrift-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          ($notes.TrimEnd() + "`n`n**SHA-256** · " + $hash) | Set-Content release-notes.md -Encoding utf8
+          gh release create "v$version" GlanceDrift-win-x64.zip --target $env:GITHUB_SHA --title "余光漫游 GlanceDrift v$version · Windows x64" --notes-file release-notes.md
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
